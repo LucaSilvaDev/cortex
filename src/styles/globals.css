@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/* Class-based dark mode — overrides the default media-query variant */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /* Radius scale */
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+
+  /* Semantic colors mapped to CSS vars so dark/light switching works at runtime */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+}
+
+/* ─── Light theme ──────────────────────────────────────────────────── */
+:root {
+  --radius: 0.5rem;
+  --background: #f8f8fc;
+  --foreground: #09090b;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #0891b2;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #0891b2;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.08);
+  --ring: #0891b2;
+}
+
+/* ─── Dark theme (Cortex default) ──────────────────────────────────── */
+.dark {
+  --background: #0a0a0f;
+  --foreground: #fafafa;
+  --surface: #13131a;
+  --card: #13131a;
+  --card-foreground: #fafafa;
+  --popover: #13131a;
+  --popover-foreground: #fafafa;
+  --primary: #22d3ee;
+  --primary-foreground: #0a0a0f;
+  --secondary: #1c1c27;
+  --secondary-foreground: #fafafa;
+  --muted: #1c1c27;
+  --muted-foreground: #a1a1aa;
+  --accent: #22d3ee;
+  --accent-foreground: #0a0a0f;
+  --destructive: #f87171;
+  --border: rgba(255, 255, 255, 0.06);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: #22d3ee;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Visible focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── TipTap / ProseMirror editor ──────────────────────────────────── */
+
+.cortex-editor {
+  line-height: 1.75;
+  color: var(--foreground);
+}
+
+.cortex-editor > * + * {
+  margin-top: 0.5rem;
+}
+
+/* Placeholder */
+.cortex-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.4;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Headings */
+.cortex-editor h1 { font-size: 2rem; font-weight: 700; line-height: 1.2; margin-top: 2rem; margin-bottom: 0.5rem; }
+.cortex-editor h2 { font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-top: 1.75rem; margin-bottom: 0.4rem; }
+.cortex-editor h3 { font-size: 1.2rem; font-weight: 600; line-height: 1.4; margin-top: 1.5rem; margin-bottom: 0.3rem; }
+
+/* Lists */
+.cortex-editor ul,
+.cortex-editor ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.cortex-editor ul { list-style-type: disc; }
+.cortex-editor ol { list-style-type: decimal; }
+.cortex-editor li { margin: 0.2rem 0; }
+.cortex-editor li > p { margin: 0; }
+
+/* Task list */
+.cortex-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.cortex-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.cortex-editor ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+.cortex-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  accent-color: var(--primary);
+}
+.cortex-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='%230a0a0f' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
+}
+.cortex-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* Blockquote */
+.cortex-editor blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* Horizontal rule */
+.cortex-editor hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* Inline code */
+.cortex-editor code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--secondary);
+  color: var(--primary);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+}
+
+/* Links */
+.cortex-editor a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.cortex-editor a:hover {
+  opacity: 0.8;
+}
+
+/* Selection */
+.cortex-editor ::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
