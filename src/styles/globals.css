@@ -39,24 +39,24 @@
 /* ─── Light theme ──────────────────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
-  --background: #f8f8fc;
-  --foreground: #09090b;
-  --surface: #ffffff;
-  --card: #ffffff;
-  --card-foreground: #09090b;
-  --popover: #ffffff;
-  --popover-foreground: #09090b;
+  --background: #f5f0e8;
+  --foreground: #1c1917;
+  --surface: #faf7f2;
+  --card: #faf7f2;
+  --card-foreground: #1c1917;
+  --popover: #faf7f2;
+  --popover-foreground: #1c1917;
   --primary: #0891b2;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --secondary: #ede8df;
+  --secondary-foreground: #1c1917;
+  --muted: #ede8df;
+  --muted-foreground: #78716c;
   --accent: #0891b2;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.09);
+  --input: rgba(0, 0, 0, 0.09);
   --ring: #0891b2;
 }
 
@@ -102,6 +102,61 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* ─── Popup entrance animation ─────────────────────────────────────── */
+
+@keyframes cortex-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cortex-popup {
+  animation: cortex-pop-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+
+/* ─── Floating animation for empty states ──────────────────────────── */
+
+@keyframes cortex-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+.cortex-float {
+  animation: cortex-float 3s ease-in-out infinite;
+}
+
+/* ─── Button press feedback ─────────────────────────────────────────── */
+
+.press-scale {
+  transition: transform 100ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.press-scale:active {
+  transform: scale(0.95);
 }
 
 /* ─── TipTap / ProseMirror editor ──────────────────────────────────── */
@@ -217,4 +272,13 @@
 .cortex-editor ::selection {
   background-color: var(--primary);
   color: var(--primary-foreground);
+}
+
+/* ─── Mermaid diagrams ──────────────────────────────────────────────── */
+
+.mermaid-output svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }

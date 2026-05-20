@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   DndContext,
@@ -140,7 +141,11 @@ function PageRow({
         <GripVertical size={12} />
       </button>
 
-      <FileText size={14} className="shrink-0" />
+      {page.icon ? (
+        <span className="text-sm leading-none shrink-0 w-[14px] text-center">{page.icon}</span>
+      ) : (
+        <FileText size={14} className="shrink-0" />
+      )}
 
       {isEditing ? (
         <InlineRename
@@ -290,37 +295,47 @@ function FolderRow({
       </div>
 
       {/* Children */}
-      {expanded && pages.length > 0 && (
-        <div>
-          {pages.map((page) => (
-            <PageRow
-              key={page.id}
-              page={page}
-              depth={1}
-              activePage={activePageId === page.id}
-              editingId={editingId}
-              editingValue={editingValue}
-              onEditChange={onEditChange}
-              onCommitRename={onCommitRename}
-              onCancelRename={onCancelRename}
-              onStartRename={onStartRename}
-              onDelete={onDelete}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-      )}
-      {expanded && pages.length === 0 && (
-        <div
-          className="pl-10 py-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-          onClick={() => onCreatePage(folder.id)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && onCreatePage(folder.id)}
-        >
-          + Nova página
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="folder-children"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            {pages.length > 0 ? (
+              pages.map((page) => (
+                <PageRow
+                  key={page.id}
+                  page={page}
+                  depth={1}
+                  activePage={activePageId === page.id}
+                  editingId={editingId}
+                  editingValue={editingValue}
+                  onEditChange={onEditChange}
+                  onCommitRename={onCommitRename}
+                  onCancelRename={onCancelRename}
+                  onStartRename={onStartRename}
+                  onDelete={onDelete}
+                  onNavigate={onNavigate}
+                />
+              ))
+            ) : (
+              <div
+                className="pl-10 py-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => onCreatePage(folder.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onCreatePage(folder.id)}
+              >
+                + Nova página
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -465,7 +480,7 @@ export function SidebarTree() {
       {/* Empty state */}
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-3 px-4 text-center">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center cortex-float">
             <FileText size={18} className="text-primary" />
           </div>
           <div>

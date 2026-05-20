@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
+import { PluginKey } from '@tiptap/pm/state'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -33,8 +34,7 @@ function WikiLinkView({ node, extension }: NodeViewProps) {
   const pageId = node.attrs.pageId as string
 
   function handleClick() {
-    const navigate = extension.options.onNavigate as ((pageId: string) => void) | undefined
-    navigate?.(pageId)
+    _wikiNavigate?.(pageId)
   }
 
   return (
@@ -56,9 +56,19 @@ function WikiLinkView({ node, extension }: NodeViewProps) {
   )
 }
 
-// ─── Module-level keyboard bridge ────────────────────────────────────
+// ─── Module-level state (shared between extension and React) ─────────
 
+let _wikiPages: WikiLinkPage[] = []
+let _wikiNavigate: ((pageId: string) => void) | null = null
 let wikiKeyDownHandler: ((event: KeyboardEvent) => boolean) | null = null
+
+export function setWikiLinkPages(pages: WikiLinkPage[]) {
+  _wikiPages = pages
+}
+
+export function setWikiLinkNavigate(fn: (pageId: string) => void) {
+  _wikiNavigate = fn
+}
 
 // ─── Suggestion popup ────────────────────────────────────────────────
 
@@ -112,7 +122,7 @@ function WikiLinkPopup({ items, command, clientRect }: WikiPopupProps) {
   return (
     <div
       style={{ position: 'fixed', top: rect.bottom + 6, left: rect.left, zIndex: 999 }}
-      className="w-64 bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+      className="cortex-popup w-64 bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
     >
       {items.length === 0 ? (
         <p className="px-3 py-3 text-sm text-muted-foreground">Nenhuma página encontrada</p>
@@ -153,10 +163,7 @@ export const WikiLink = Node.create({
   draggable: false,
 
   addOptions() {
-    return {
-      pages: [] as WikiLinkPage[],
-      onNavigate: null as ((pageId: string) => void) | null,
-    }
+    return {}
   },
 
   addAttributes() {
@@ -190,6 +197,7 @@ export const WikiLink = Node.create({
   addProseMirrorPlugins() {
     return [
       Suggestion<WikiLinkPage>({
+        pluginKey: new PluginKey('wikiLink'),
         editor: this.editor,
         char: '[[',
         allowSpaces: true,
@@ -203,10 +211,9 @@ export const WikiLink = Node.create({
             .run()
         },
         items: ({ query }) => {
-          const pages = this.options.pages as WikiLinkPage[]
           const q = query.toLowerCase().trim()
-          if (!q) return pages.slice(0, 8)
-          return pages
+          if (!q) return _wikiPages.slice(0, 8)
+          return _wikiPages
             .filter((p) => (p.title || '').toLowerCase().includes(q))
             .slice(0, 8)
         },

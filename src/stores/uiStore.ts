@@ -8,12 +8,14 @@ interface UIState {
   sidebarWidth: number
   commandPaletteOpen: boolean
   shortcutsOpen: boolean
+  focusMode: boolean
   toggleTheme: () => void
   setTheme: (theme: ThemeMode) => void
   toggleSidebar: () => void
   setSidebarWidth: (width: number) => void
   setCommandPaletteOpen: (open: boolean) => void
   setShortcutsOpen: (open: boolean) => void
+  toggleFocusMode: () => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -24,6 +26,7 @@ export const useUIStore = create<UIState>()(
       sidebarWidth: 260,
       commandPaletteOpen: false,
       shortcutsOpen: false,
+      focusMode: false,
 
       toggleTheme: () =>
         set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
@@ -38,6 +41,8 @@ export const useUIStore = create<UIState>()(
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
 
       setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
+
+      toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
     }),
     {
       name: 'cortex-ui',

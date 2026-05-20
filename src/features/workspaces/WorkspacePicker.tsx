@@ -102,6 +102,7 @@ export function WorkspacePicker() {
           />
           <div
             className={cn(
+              'cortex-popup',
               'absolute top-full left-0 right-0 z-20',
               'bg-surface border-x border-b border-border rounded-b-lg',
               'shadow-xl shadow-black/30',

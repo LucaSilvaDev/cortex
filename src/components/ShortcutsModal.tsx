@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useUIStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
@@ -59,10 +60,15 @@ export function ShortcutsModal() {
   const open = useUIStore((s) => s.shortcutsOpen)
   const setOpen = useUIStore((s) => s.setShortcutsOpen)
 
-  if (!open) return null
-
   return (
-    <div
+    <AnimatePresence>
+      {open && (
+    <motion.div
+      key="shortcuts-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
       className="fixed inset-0 z-50 flex items-center justify-center"
       role="dialog"
       aria-modal="true"
@@ -73,7 +79,13 @@ export function ShortcutsModal() {
         onClick={() => setOpen(false)}
       />
 
-      <div className="relative w-full max-w-lg mx-4 max-h-[80vh] flex flex-col bg-surface border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 8 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 8 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        className="relative w-full max-w-lg mx-4 max-h-[80vh] flex flex-col bg-surface border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <h2 className="text-sm font-semibold text-foreground">Atalhos de teclado</h2>
@@ -111,7 +123,9 @@ export function ShortcutsModal() {
             </div>
           ))}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

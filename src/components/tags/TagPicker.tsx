@@ -78,7 +78,7 @@ export function TagPicker({ workspaceId, selectedTagIds, onChange }: TagPickerPr
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 z-40 w-56 bg-surface border border-border rounded-lg shadow-xl shadow-black/30 overflow-hidden">
+        <div className="cortex-popup absolute top-full left-0 mt-1.5 z-40 w-56 bg-surface border border-border rounded-lg shadow-xl shadow-black/30 overflow-hidden">
           <div className="max-h-48 overflow-y-auto py-1">
             {workspaceTags.length === 0 && !creating && (
               <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma tag ainda.</p>

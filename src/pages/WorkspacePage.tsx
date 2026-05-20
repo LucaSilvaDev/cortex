@@ -1,4 +1,5 @@
 import { FileText, Plus } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { usePageStore } from '@/stores/pageStore'
 import { useNavigate } from 'react-router-dom'
@@ -20,8 +21,13 @@ export function WorkspacePage() {
   const hasPages = pages.length > 0
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-5 text-center px-4">
-      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+    <motion.div
+      className="flex flex-col items-center justify-center h-full gap-5 text-center px-4"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+    >
+      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center cortex-float">
         <FileText size={20} className="text-primary" />
       </div>
       <div>
@@ -36,11 +42,11 @@ export function WorkspacePage() {
       </div>
       <button
         onClick={handleCreatePage}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="press-scale flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Plus size={15} />
         Nova página
       </button>
-    </div>
+    </motion.div>
   )
 }

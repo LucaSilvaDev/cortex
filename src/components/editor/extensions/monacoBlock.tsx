@@ -2,6 +2,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 import MonacoEditor from '@monaco-editor/react'
+import type { OnMount } from '@monaco-editor/react'
 import { useState } from 'react'
 import { Check, ChevronDown, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -85,9 +86,18 @@ function CopyButton({ code }: { code: string }) {
   )
 }
 
-function MonacoBlockView({ node, updateAttributes, selected }: NodeViewProps) {
+function MonacoBlockView({ node, updateAttributes, selected, editor, getPos }: NodeViewProps) {
   const language = (node.attrs.language as string) ?? 'javascript'
   const code = (node.attrs.code as string) ?? ''
+
+  const handleMount: OnMount = (monacoEditor, monacoInstance) => {
+    monacoEditor.addCommand(monacoInstance.KeyCode.Escape, () => {
+      const pos = getPos()
+      if (typeof pos !== 'number') return
+      const endPos = pos + node.nodeSize
+      editor.chain().insertContentAt(endPos, { type: 'paragraph' }).setTextSelection(endPos + 1).focus().run()
+    })
+  }
 
   return (
     <NodeViewWrapper contentEditable={false}>
@@ -103,7 +113,10 @@ function MonacoBlockView({ node, updateAttributes, selected }: NodeViewProps) {
             value={language}
             onChange={(lang) => updateAttributes({ language: lang })}
           />
-          <CopyButton code={code} />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/20 select-none">Esc para sair</span>
+            <CopyButton code={code} />
+          </div>
         </div>
 
         {/* Monaco */}
@@ -114,6 +127,7 @@ function MonacoBlockView({ node, updateAttributes, selected }: NodeViewProps) {
             value={code}
             theme="vs-dark"
             onChange={(value) => updateAttributes({ code: value ?? '' })}
+            onMount={handleMount}
             options={{
               minimap: { enabled: false },
               scrollBeyondLastLine: false,

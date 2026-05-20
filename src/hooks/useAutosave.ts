@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { usePageStore } from '@/stores/pageStore'
-
-export type SaveStatus = 'idle' | 'saving' | 'saved'
 
 export function useAutosave(
   pageId: string | undefined,
@@ -9,19 +8,18 @@ export function useAutosave(
   content: string,
 ) {
   const updatePage = usePageStore((s) => s.updatePage)
-  const [status, setStatus] = useState<SaveStatus>('idle')
   const firstRunRef = useRef(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Reset dirty flag when page changes
+  // Always-fresh data ref so saveNow never goes stale
+  const dataRef = useRef({ pageId, title, content })
+  dataRef.current = { pageId, title, content }
+
   useEffect(() => {
     firstRunRef.current = true
-    setStatus('idle')
   }, [pageId])
 
   useEffect(() => {
-    // Skip the initial mount snapshot for this page
     if (firstRunRef.current) {
       firstRunRef.current = false
       return
@@ -29,19 +27,25 @@ export function useAutosave(
     if (!pageId) return
 
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
-
-    setStatus('saving')
-    timerRef.current = setTimeout(async () => {
-      await updatePage(pageId, { title, content })
-      setStatus('saved')
-      clearTimerRef.current = setTimeout(() => setStatus('idle'), 2000)
-    }, 500)
+    timerRef.current = setTimeout(() => doSave(), 500)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [pageId, title, content, updatePage])
+  }, [pageId, title, content])
 
-  return { status }
+  const doSave = useCallback(async () => {
+    const { pageId, title, content } = dataRef.current
+    if (!pageId) return
+    await updatePage(pageId, { title, content })
+    toast.success('Salvo', { id: 'autosave', duration: 1500 })
+  }, [updatePage])
+
+  // Stable reference — cancels pending autosave timer and saves immediately
+  const saveNow = useCallback(async () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    await doSave()
+  }, [doSave])
+
+  return { saveNow }
 }

@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
+import { PluginKey } from '@tiptap/pm/state'
 import { createRoot, type Root } from 'react-dom/client'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -11,6 +12,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Image,
   Info,
   List,
   ListOrdered,
@@ -18,6 +20,10 @@ import {
   Quote,
   Type,
   XCircle,
+  GitBranch,
+  Network,
+  ArrowRightLeft,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -132,6 +138,63 @@ const COMMANDS: SlashCommandItem[] = [
     keywords: ['danger', 'error', 'critical', 'red'],
     command: (e, r) => e.chain().focus().deleteRange(r).setCallout({ type: 'danger' }).run(),
   },
+  {
+    title: 'Fluxograma',
+    description: 'Diagrama de fluxo Mermaid',
+    Icon: GitBranch,
+    keywords: ['mermaid', 'flowchart', 'flow', 'diagram', 'diagrama', 'fluxo'],
+    command: (e, r) =>
+      e.chain().focus().deleteRange(r).setMermaidBlock({
+        code: 'flowchart LR\n  A[Início] --> B{Decisão?}\n  B -- Sim --> C[Ação]\n  B -- Não --> D[Fim]',
+      }).run(),
+  },
+  {
+    title: 'Diagrama ER',
+    description: 'Entidade-relacionamento Mermaid',
+    Icon: Network,
+    keywords: ['mermaid', 'er', 'entity', 'relation', 'database', 'banco', 'diagrama'],
+    command: (e, r) =>
+      e.chain().focus().deleteRange(r).setMermaidBlock({
+        code: 'erDiagram\n  USUARIO ||--o{ PEDIDO : faz\n  PEDIDO ||--|{ ITEM : contém\n  PRODUTO ||--o{ ITEM : aparece',
+      }).run(),
+  },
+  {
+    title: 'Diagrama de Sequência',
+    description: 'Sequência de chamadas Mermaid',
+    Icon: ArrowRightLeft,
+    keywords: ['mermaid', 'sequence', 'sequencia', 'call', 'api', 'diagrama'],
+    command: (e, r) =>
+      e.chain().focus().deleteRange(r).setMermaidBlock({
+        code: 'sequenceDiagram\n  Cliente->>Servidor: GET /api/dados\n  Servidor->>Banco: SELECT *\n  Banco-->>Servidor: rows\n  Servidor-->>Cliente: 200 OK',
+      }).run(),
+  },
+  {
+    title: 'Flashcard',
+    description: 'Card de estudo com repetição espaçada',
+    Icon: BookOpen,
+    keywords: ['flashcard', 'card', 'review', 'srs', 'estudo', 'memoria', 'repetição'],
+    command: (e, r) =>
+      e.chain().focus().deleteRange(r).setFlashcardBlock({ front: '', back: '', cardId: '' }).run(),
+  },
+  {
+    title: 'Imagem',
+    description: 'Inserir imagem do computador',
+    Icon: Image,
+    keywords: ['image', 'imagem', 'foto', 'picture', 'upload', 'arquivo'],
+    command: (e, r) => {
+      e.chain().focus().deleteRange(r).run()
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'image/*'
+      input.onchange = async () => {
+        const file = input.files?.[0]
+        if (!file) return
+        const { insertImageFile } = await import('./imageBlock')
+        insertImageFile(file, (src) => e.chain().focus().setImageBlock({ src }).run())
+      }
+      input.click()
+    },
+  },
 ]
 
 function filterCommands(query: string): SlashCommandItem[] {
@@ -208,7 +271,7 @@ function SlashMenuPopup({ items, command, clientRect }: SlashMenuPopupProps) {
   return (
     <div
       style={{ position: 'fixed', top: rect.bottom + 6, left: rect.left, zIndex: 999 }}
-      className="w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+      className="cortex-popup w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
     >
       <div className="max-h-72 overflow-y-auto py-1.5">
         {items.map((item, i) => (
@@ -257,6 +320,7 @@ export const SlashCommandExtension = Extension.create({
   addProseMirrorPlugins() {
     return [
       Suggestion<SlashCommandItem>({
+        pluginKey: new PluginKey('slashCommand'),
         editor: this.editor,
         char: '/',
         allowSpaces: false,

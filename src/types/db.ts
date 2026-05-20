@@ -35,3 +35,17 @@ export interface Tag extends BaseEntity {
   color: string
   workspaceId: string
 }
+
+export interface Flashcard {
+  id: string
+  pageId: string
+  workspaceId: string
+  front: string
+  back: string
+  interval: number      // days until next review
+  repetitions: number   // consecutive correct answers
+  easeFactor: number    // SM-2 difficulty multiplier (starts 2.5)
+  dueDate: number       // ms timestamp — 0 means new card
+  createdAt: number
+  updatedAt: number
+}

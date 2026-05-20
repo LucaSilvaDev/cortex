@@ -11,8 +11,11 @@ import { usePageStore } from '@/stores/pageStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { Callout } from './extensions/callout'
 import { MonacoBlock } from './extensions/monacoBlock'
+import { MermaidBlock } from './extensions/mermaidBlock'
+import { FlashcardBlock } from './extensions/flashcardBlock'
+import { ImageBlock } from './extensions/imageBlock'
 import { SlashCommandExtension } from './extensions/slashCommand'
-import { WikiLink } from './extensions/wikiLink'
+import { WikiLink, setWikiLinkPages, setWikiLinkNavigate } from './extensions/wikiLink'
 import { BubbleToolbar } from './BubbleToolbar'
 
 interface EditorProps {
@@ -50,15 +53,11 @@ export function Editor({ pageId, initialContent, onChange }: EditorProps) {
       Typography,
       Callout,
       MonacoBlock,
+      MermaidBlock,
+      FlashcardBlock,
+      ImageBlock,
       SlashCommandExtension,
-      WikiLink.configure({
-        pages: wikiPages,
-        onNavigate: (targetPageId: string) => {
-          const page = pages.find((p) => p.id === targetPageId)
-          if (page) navigate(`/w/${page.workspaceId}/p/${targetPageId}`)
-          else if (activeWorkspaceId) navigate(`/w/${activeWorkspaceId}/p/${targetPageId}`)
-        },
-      }),
+      WikiLink,
     ],
     content: initialContent ? (JSON.parse(initialContent) as object) : undefined,
     editorProps: {
@@ -72,13 +71,18 @@ export function Editor({ pageId, initialContent, onChange }: EditorProps) {
     },
   })
 
-  // Keep WikiLink pages list in sync without recreating the editor
+  // Sync WikiLink module-level state whenever pages or navigate changes
   useEffect(() => {
-    if (!editor || editor.isDestroyed) return
-    editor.extensionManager.extensions
-      .find((e) => e.name === 'wikiLink')
-      ?.configure({ pages: wikiPages })
-  }, [editor, wikiPages])
+    setWikiLinkPages(wikiPages)
+  }, [wikiPages])
+
+  useEffect(() => {
+    setWikiLinkNavigate((targetPageId: string) => {
+      const page = pages.find((p) => p.id === targetPageId)
+      if (page) navigate(`/w/${page.workspaceId}/p/${targetPageId}`)
+      else if (activeWorkspaceId) navigate(`/w/${activeWorkspaceId}/p/${targetPageId}`)
+    })
+  }, [pages, navigate, activeWorkspaceId])
 
   // Reload content when navigating between pages
   useEffect(() => {
