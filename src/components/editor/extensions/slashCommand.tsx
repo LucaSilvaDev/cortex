@@ -3,7 +3,7 @@ import type { Editor, Range } from '@tiptap/core'
 import Suggestion from '@tiptap/suggestion'
 import { PluginKey } from '@tiptap/pm/state'
 import { createRoot, type Root } from 'react-dom/client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle,
@@ -229,19 +229,51 @@ interface SlashMenuPopupProps {
   clientRect: (() => DOMRect | null) | null
 }
 
+const MENU_MAX_H = 300 // max-h-72 (288) + footer padding
+
 function SlashMenuPopup({ items, command, clientRect }: SlashMenuPopupProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const selectedRef = useRef(0)
   const itemsRef = useRef(items)
   const commandRef = useRef(command)
+  const listRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   selectedRef.current = selectedIndex
   itemsRef.current = items
   commandRef.current = command
 
+  const calcPos = useCallback(() => {
+    const rect = clientRect?.()
+    if (!rect) { setPos(null); return }
+    const spaceBelow = window.innerHeight - rect.bottom - 8
+    const top = spaceBelow >= MENU_MAX_H
+      ? rect.bottom + 6
+      : Math.max(8, rect.top - MENU_MAX_H - 6)
+    const left = Math.min(rect.left, window.innerWidth - 292)
+    setPos({ top, left })
+  }, [clientRect])
+
+  useEffect(() => {
+    calcPos()
+    const scrollEl = document.querySelector('main')
+    scrollEl?.addEventListener('scroll', calcPos, { passive: true })
+    window.addEventListener('resize', calcPos)
+    return () => {
+      scrollEl?.removeEventListener('scroll', calcPos)
+      window.removeEventListener('resize', calcPos)
+    }
+  }, [calcPos])
+
   useEffect(() => {
     setSelectedIndex(0)
   }, [items.length])
+
+  // Keep selected item visible inside the list
+  useEffect(() => {
+    const el = listRef.current?.children[selectedIndex] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [selectedIndex])
 
   useEffect(() => {
     keyDownHandler = (event: KeyboardEvent) => {
@@ -274,15 +306,15 @@ function SlashMenuPopup({ items, command, clientRect }: SlashMenuPopupProps) {
     }
   }, [])
 
-  const rect = clientRect?.()
-  if (!rect || items.length === 0) return null
+  if (!pos || items.length === 0) return null
 
   return (
     <div
-      style={{ position: 'fixed', top: rect.bottom + 6, left: rect.left, zIndex: 999 }}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
       className="cortex-popup w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+      onWheel={(e) => e.stopPropagation()}
     >
-      <div className="max-h-72 overflow-y-auto py-1.5">
+      <div ref={listRef} className="max-h-72 overflow-y-auto py-1.5">
         {items.map((item, i) => (
           <button
             key={item.title}

@@ -27,10 +27,13 @@ import {
   Pencil,
   Pin,
   Plus,
+  Tag,
   Trash2,
+  X,
 } from 'lucide-react'
 import { usePageStore } from '@/stores/pageStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useTagStore } from '@/stores/tagStore'
 import { TemplateModal } from '@/components/TemplateModal'
 import { cn } from '@/lib/utils'
 import type { PageTemplate } from '@/lib/pageTemplates'
@@ -365,6 +368,7 @@ export function SidebarTree() {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId)
   const { folders, pages, createPage, createFolder, updatePage, deletePage, updateFolder, deleteFolder } =
     usePageStore()
+  const { tags } = useTagStore()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -374,8 +378,24 @@ export function SidebarTree() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [templateOpen, setTemplateOpen] = useState(false)
+  const [tagSectionOpen, setTagSectionOpen] = useState(false)
+  const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(new Set())
   const pendingFolderIdRef = useRef<string | null>(null)
   const pendingFocusId = useRef<string | null>(null)
+
+  const wsTags = tags.filter((t) => t.workspaceId === activeWorkspaceId)
+
+  const toggleTagFilter = (tagId: string) => {
+    setActiveTagFilter((prev) => {
+      const next = new Set(prev)
+      next.has(tagId) ? next.delete(tagId) : next.add(tagId)
+      return next
+    })
+  }
+
+  const filteredPages = activeTagFilter.size > 0
+    ? pages.filter((p) => p.tags.some((tid) => activeTagFilter.has(tid)))
+    : null
 
   const rootFolders = folders.filter((f) => f.parentId === null).sort((a, b) => a.order - b.order)
   const rootPages = folders.length > 0 || pages.length > 0
@@ -496,6 +516,21 @@ export function SidebarTree() {
           Páginas
         </span>
         <div className="flex items-center gap-0.5">
+          {wsTags.length > 0 && (
+            <button
+              onClick={() => setTagSectionOpen((v) => !v)}
+              className={cn(
+                'p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                tagSectionOpen || activeTagFilter.size > 0
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
+              )}
+              aria-label="Filtrar por tag"
+              title="Filtrar por tag"
+            >
+              <Tag size={13} />
+            </button>
+          )}
           <button
             onClick={handleCreateFolder}
             className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -513,8 +548,100 @@ export function SidebarTree() {
         </div>
       </div>
 
-      {/* Empty state */}
-      {isEmpty ? (
+      {/* Tag filter section */}
+      <AnimatePresence initial={false}>
+        {tagSectionOpen && wsTags.length > 0 && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+            className="shrink-0"
+          >
+            <div className="px-2 pb-2 border-b border-border">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                  Tags
+                </span>
+                {activeTagFilter.size > 0 && (
+                  <button
+                    onClick={() => setActiveTagFilter(new Set())}
+                    className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <X size={9} />
+                    limpar
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {wsTags.map((tag) => {
+                  const active = activeTagFilter.has(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTagFilter(tag.id)}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all"
+                      style={{
+                        backgroundColor: active ? `${tag.color}30` : `${tag.color}12`,
+                        color: tag.color,
+                        border: `1px solid ${active ? tag.color : `${tag.color}40`}`,
+                        boxShadow: active ? `0 0 0 1px ${tag.color}40` : 'none',
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Filtered pages view */}
+      {filteredPages && (
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          {filteredPages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+              <Tag size={16} className="text-muted-foreground/40" />
+              <p className="text-xs text-muted-foreground">Nenhuma página com essas tags</p>
+            </div>
+          ) : (
+            filteredPages.sort((a, b) => b.updatedAt - a.updatedAt).map((page) => {
+              const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null
+              return (
+                <div key={page.id}>
+                  <PageRow
+                    page={page}
+                    activePage={activePageId === page.id}
+                    editingId={editingId}
+                    editingValue={editingValue}
+                    onEditChange={setEditingValue}
+                    onCommitRename={commitRename}
+                    onCancelRename={cancelRename}
+                    onStartRename={startRename}
+                    onDelete={handleDeletePage}
+                    onPin={handlePin}
+                    onNavigate={(id) => navigate(`/w/${activeWorkspaceId}/p/${id}`)}
+                  />
+                  {folder && (
+                    <div className="pl-8 -mt-0.5 mb-0.5">
+                      <span className="text-[10px] text-muted-foreground/40 flex items-center gap-1">
+                        <Folder size={9} />
+                        {folder.name || 'Pasta'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
+
+      {/* Normal tree (hidden when tag filter is active) */}
+      {!filteredPages && isEmpty ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-3 px-4 text-center">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center cortex-float">
             <FileText size={18} className="text-primary" />
@@ -533,7 +660,7 @@ export function SidebarTree() {
             </p>
           </div>
         </div>
-      ) : (
+      ) : !filteredPages ? (
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {/* Pinned pages section */}
           {pages.filter((p) => p.isPinned).length > 0 && (
@@ -630,7 +757,7 @@ export function SidebarTree() {
             </SortableContext>
           </DndContext>
         </div>
-      )}
+      ) : null}
 
       <TemplateModal
         open={templateOpen}
