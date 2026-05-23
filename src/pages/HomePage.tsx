@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils'
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 const DAY_MS = 86_400_000
-const DAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 function greeting() {
   const h = new Date().getHours()
@@ -48,14 +47,34 @@ function computeStreak(pages: Page[]): number {
   return streak
 }
 
-function buildActivity(pages: Page[]) {
-  const today = dayKey(Date.now())
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = today - (6 - i)
-    const count = pages.filter((p) => dayKey(p.updatedAt) === day).length
-    const date = new Date(day * DAY_MS)
-    return { label: DAYS_PT[date.getDay()], count, isToday: i === 6 }
+const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+const HEATMAP_WEEKS = 13
+
+function buildHeatmap(pages: Page[]) {
+  const today = new Date(); today.setHours(0,0,0,0)
+  // Start from the Sunday of HEATMAP_WEEKS weeks ago
+  const start = new Date(today)
+  start.setDate(start.getDate() - today.getDay() - (HEATMAP_WEEKS - 1) * 7)
+
+  const countMap = new Map<string, number>()
+  pages.forEach((p) => {
+    const d = new Date(p.updatedAt)
+    const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    countMap.set(k, (countMap.get(k) ?? 0) + 1)
   })
+
+  const weeks: Array<Array<{ date: Date; count: number; isToday: boolean; isFuture: boolean }>> = []
+  const cur = new Date(start)
+  for (let w = 0; w < HEATMAP_WEEKS; w++) {
+    const week = []
+    for (let d = 0; d < 7; d++) {
+      const k = `${cur.getFullYear()}-${cur.getMonth()}-${cur.getDate()}`
+      week.push({ date: new Date(cur), count: countMap.get(k) ?? 0, isToday: cur.toDateString() === today.toDateString(), isFuture: cur > today })
+      cur.setDate(cur.getDate() + 1)
+    }
+    weeks.push(week)
+  }
+  return weeks
 }
 
 // ─── types ──────────────────────────────────────────────────────────────────
@@ -102,36 +121,77 @@ function StatCard({
   )
 }
 
-function ActivityChart({ data }: { data: { label: string; count: number; isToday: boolean }[] }) {
-  const max = Math.max(...data.map((d) => d.count), 1)
+function HeatmapChart({ weeks }: { weeks: ReturnType<typeof buildHeatmap> }) {
+  // Month labels: find the first week each month appears
+  const monthLabels: Array<{ label: string; col: number }> = []
+  weeks.forEach((week, w) => {
+    const m = week[0].date.getMonth()
+    if (w === 0 || weeks[w - 1][0].date.getMonth() !== m) {
+      monthLabels.push({ label: MONTHS_PT[m], col: w })
+    }
+  })
+
   return (
-    <div className="flex flex-col h-full p-4 rounded-xl border border-border bg-surface">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-        Atividade — 7 dias
+    <div className="p-4 rounded-xl border border-border bg-surface">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+        Atividade — {HEATMAP_WEEKS} semanas
       </p>
-      <div className="flex items-end gap-1.5 flex-1 min-h-0">
-        {data.map((d, i) => (
-          <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
-            <div className="w-full flex items-end" style={{ height: 64 }}>
-              <motion.div
-                className={cn(
-                  'w-full rounded-sm',
-                  d.isToday ? 'bg-primary' : 'bg-primary/25',
-                  d.count === 0 && 'bg-border',
-                )}
-                initial={{ height: 0 }}
-                animate={{ height: d.count === 0 ? 3 : Math.max(6, (d.count / max) * 64) }}
-                transition={{ duration: 0.5, ease: 'easeOut', delay: i * 0.04 }}
-              />
+
+      {/* Month labels */}
+      <div className="flex mb-1 pl-5">
+        {weeks.map((_, w) => {
+          const ml = monthLabels.find((m) => m.col === w)
+          return (
+            <div key={w} className="flex-1 min-w-0">
+              {ml && <span className="text-[9px] text-muted-foreground/50">{ml.label}</span>}
             </div>
-            <span className={cn('text-[10px]', d.isToday ? 'text-primary font-semibold' : 'text-muted-foreground/50')}>
-              {d.label}
-            </span>
-            {d.count > 0 && (
-              <span className="text-[10px] text-muted-foreground/40 tabular-nums">{d.count}</span>
-            )}
-          </div>
+          )
+        })}
+      </div>
+
+      <div className="flex gap-0.5">
+        {/* Day labels */}
+        <div className="flex flex-col gap-0.5 mr-1 shrink-0">
+          {['D','S','T','Q','Q','S','S'].map((d, i) => (
+            <div key={i} className="h-3 flex items-center justify-end">
+              {(i === 1 || i === 3 || i === 5) && (
+                <span className="text-[9px] text-muted-foreground/40 w-3 text-center">{d}</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="flex gap-0.5 flex-1">
+          {weeks.map((week, w) => (
+            <div key={w} className="flex flex-col gap-0.5 flex-1">
+              {week.map((cell, d) => (
+                <div
+                  key={d}
+                  title={`${cell.date.toLocaleDateString('pt-BR')}: ${cell.count} edição(ões)`}
+                  className={cn(
+                    'aspect-square rounded-[2px] min-w-[8px] max-w-[14px] transition-opacity',
+                    cell.isFuture ? 'opacity-0 pointer-events-none' : '',
+                    cell.isToday ? 'ring-1 ring-primary ring-offset-[1.5px] ring-offset-surface' : '',
+                    cell.count === 0 ? 'bg-border' :
+                    cell.count <= 2 ? 'bg-primary/25' :
+                    cell.count <= 5 ? 'bg-primary/55' :
+                    'bg-primary',
+                  )}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-1 mt-2 justify-end">
+        <span className="text-[9px] text-muted-foreground/40">menos</span>
+        {['bg-border','bg-primary/25','bg-primary/55','bg-primary'].map((c, i) => (
+          <div key={i} className={cn('w-2.5 h-2.5 rounded-[2px]', c)} />
         ))}
+        <span className="text-[9px] text-muted-foreground/40">mais</span>
       </div>
     </div>
   )
@@ -268,7 +328,7 @@ export function HomePage() {
   // ── derived stats ──
   const now = Date.now()
   const streak = useMemo(() => computeStreak(allPages), [allPages])
-  const activity = useMemo(() => buildActivity(allPages), [allPages])
+  const heatmap = useMemo(() => buildHeatmap(allPages), [allPages])
 
   const totalCards = cards.length
   const novos = cards.filter((c) => c.dueDate === 0).length
@@ -339,9 +399,13 @@ export function HomePage() {
         />
       </motion.div>
 
-      {/* Activity + Flashcard panels */}
-      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8" style={{ height: 160 }}>
-        <ActivityChart data={activity} />
+      {/* Heatmap */}
+      <motion.div variants={item} className="mb-4">
+        <HeatmapChart weeks={heatmap} />
+      </motion.div>
+
+      {/* Flashcard panel */}
+      <motion.div variants={item} className="mb-8">
         <FlashcardPanel total={totalCards} novos={novos} emDia={emDia} pendentes={pendentes} />
       </motion.div>
 

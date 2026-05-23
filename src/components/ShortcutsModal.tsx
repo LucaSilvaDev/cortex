@@ -7,7 +7,10 @@ const SHORTCUTS = [
   {
     group: 'Geral',
     items: [
-      { keys: ['Ctrl', 'K'], description: 'Abrir paleta de comandos' },
+      { keys: ['Ctrl', 'K'], description: 'Abrir paleta de comandos / busca' },
+      { keys: ['Ctrl', 'S'], description: 'Salvar página' },
+      { keys: ['F11'], description: 'Ativar / sair do modo foco' },
+      { keys: ['Esc'], description: 'Sair do modo foco ou fechar modal' },
       { keys: ['?'], description: 'Ver atalhos de teclado' },
       { keys: ['Alt', 'T'], description: 'Alternar tema claro/escuro' },
       { keys: ['Alt', 'S'], description: 'Alternar sidebar' },
@@ -16,10 +19,9 @@ const SHORTCUTS = [
   {
     group: 'Editor',
     items: [
-      { keys: ['/'], description: 'Menu de comandos (slash)' },
+      { keys: ['/'], description: 'Menu de comandos slash' },
       { keys: ['Ctrl', 'B'], description: 'Negrito' },
       { keys: ['Ctrl', 'I'], description: 'Itálico' },
-      { keys: ['Ctrl', 'U'], description: 'Sublinhado' },
       { keys: ['Ctrl', 'Shift', 'S'], description: 'Tachado' },
       { keys: ['Ctrl', '`'], description: 'Código inline' },
       { keys: ['Ctrl', 'Z'], description: 'Desfazer' },
@@ -27,16 +29,41 @@ const SHORTCUTS = [
     ],
   },
   {
-    group: 'Formatação de bloco',
+    group: 'Formatação rápida',
     items: [
-      { keys: ['# ', 'Espaço'], description: 'Título H1' },
-      { keys: ['## ', 'Espaço'], description: 'Título H2' },
-      { keys: ['### ', 'Espaço'], description: 'Título H3' },
-      { keys: ['- ', 'Espaço'], description: 'Lista com marcadores' },
-      { keys: ['1. ', 'Espaço'], description: 'Lista numerada' },
-      { keys: ['[ ] ', 'Espaço'], description: 'Checklist' },
-      { keys: ['> ', 'Espaço'], description: 'Citação' },
+      { keys: ['#', 'Espaço'], description: 'Título H1' },
+      { keys: ['##', 'Espaço'], description: 'Título H2' },
+      { keys: ['###', 'Espaço'], description: 'Título H3' },
+      { keys: ['-', 'Espaço'], description: 'Lista com marcadores' },
+      { keys: ['1.', 'Espaço'], description: 'Lista numerada' },
+      { keys: ['[]', 'Espaço'], description: 'Checklist' },
+      { keys: ['>', 'Espaço'], description: 'Citação' },
       { keys: ['---'], description: 'Divisor horizontal' },
+    ],
+  },
+  {
+    group: 'Tabela',
+    items: [
+      { keys: ['Tab'], description: 'Próxima célula' },
+      { keys: ['Shift', 'Tab'], description: 'Célula anterior' },
+      { keys: ['Enter'], description: 'Nova linha na célula' },
+    ],
+  },
+  {
+    group: 'Bloco de código Monaco',
+    items: [
+      { keys: ['Esc'], description: 'Sair do bloco e continuar escrevendo' },
+      { keys: ['Ctrl', 'Enter'], description: 'Aplicar alterações (Mermaid)' },
+    ],
+  },
+  {
+    group: 'Flashcards (revisão)',
+    items: [
+      { keys: ['Espaço'], description: 'Revelar resposta' },
+      { keys: ['1'], description: 'Avaliar: De novo' },
+      { keys: ['2'], description: 'Avaliar: Difícil' },
+      { keys: ['3'], description: 'Avaliar: Bom' },
+      { keys: ['4'], description: 'Avaliar: Fácil' },
     ],
   },
 ]

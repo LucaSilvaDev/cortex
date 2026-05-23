@@ -189,10 +189,12 @@ export function PageView() {
 
       <BacklinksPanel pageId={page.id} />
 
-      {/* Word count */}
+      {/* Word count + reading time */}
       {wordCount > 0 && (
         <p className="mt-8 text-xs text-muted-foreground/40 text-right select-none">
           {wordCount} {wordCount === 1 ? 'palavra' : 'palavras'}
+          {' · '}
+          {Math.max(1, Math.ceil(wordCount / 200))} min de leitura
         </p>
       )}
     </motion.div>
