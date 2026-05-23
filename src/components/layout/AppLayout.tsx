@@ -98,7 +98,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   if (!user) return <AuthPage />
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-full overflow-hidden text-foreground">
       {/* Sidebar — hidden in focus mode */}
       <AnimatePresence initial={false}>
         {!focusMode && (

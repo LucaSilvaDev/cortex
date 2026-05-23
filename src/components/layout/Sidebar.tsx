@@ -13,7 +13,7 @@ export function Sidebar({ width }: SidebarProps) {
   return (
     <aside
       style={{ width }}
-      className="flex flex-col h-full border-r border-border bg-surface shrink-0 overflow-hidden"
+      className="flex flex-col h-full border-r border-border bg-surface backdrop-blur-xl shrink-0 overflow-hidden"
     >
       {/* Logo — click to go home */}
       <button
