@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   ReactFlow,
   Background,
@@ -6,12 +6,16 @@ import {
   MiniMap,
   type Node,
   type Edge,
+  type NodeProps,
   BackgroundVariant,
+  Handle,
+  Position,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { usePageStore } from '@/stores/pageStore'
+import { cn } from '@/lib/utils'
 
 interface TipTapNode {
   type?: string
@@ -37,43 +41,109 @@ function parseLinks(content: string): string[] {
   }
 }
 
+// ─── Custom node ─────────────────────────────────────────────────────
+
+interface PageNodeData {
+  label: string
+  icon?: string
+  linkCount: number
+}
+
+function PageNode({ data, selected }: NodeProps & { data: PageNodeData }) {
+  return (
+    <>
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <div
+        className={cn(
+          'flex items-center gap-2 px-3 py-2 rounded-xl border text-sm',
+          'bg-surface shadow-md transition-all duration-150',
+          selected
+            ? 'border-primary shadow-primary/20 shadow-lg'
+            : 'border-border hover:border-primary/40',
+        )}
+        style={{ maxWidth: 180 }}
+      >
+        {data.icon ? (
+          <span className="text-base leading-none shrink-0">{data.icon}</span>
+        ) : (
+          <span className="w-4 h-4 rounded-md bg-primary/20 shrink-0" />
+        )}
+        <span className="text-foreground truncate font-medium text-xs leading-snug">
+          {data.label || 'Sem título'}
+        </span>
+        {data.linkCount > 0 && (
+          <span className="ml-auto shrink-0 text-[10px] text-primary bg-primary/10 rounded-full px-1.5 py-0.5 font-mono">
+            {data.linkCount}
+          </span>
+        )}
+      </div>
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+    </>
+  )
+}
+
+const nodeTypes = { page: PageNode }
+
+// ─── Spiral layout ────────────────────────────────────────────────────
+
+function spiralLayout(count: number): Array<{ x: number; y: number }> {
+  if (count === 0) return []
+  if (count === 1) return [{ x: 0, y: 0 }]
+  const positions: Array<{ x: number; y: number }> = []
+  const SPACING = 240
+  const RINGS = Math.ceil(Math.sqrt(count))
+  let placed = 0
+  positions.push({ x: 0, y: 0 }); placed++
+  for (let ring = 1; ring <= RINGS && placed < count; ring++) {
+    const ringCount = ring * 6
+    for (let i = 0; i < ringCount && placed < count; i++) {
+      const angle = (i / ringCount) * Math.PI * 2
+      positions.push({
+        x: Math.cos(angle) * ring * SPACING,
+        y: Math.sin(angle) * ring * SPACING,
+      })
+      placed++
+    }
+  }
+  return positions
+}
+
+// ─── View ─────────────────────────────────────────────────────────────
+
 export function GraphView() {
   const { activeWorkspace } = useWorkspace()
   const pages = usePageStore((s) => s.pages)
   const navigate = useNavigate()
 
   const { nodes, edges } = useMemo(() => {
-    const cols = Math.max(1, Math.ceil(Math.sqrt(pages.length)))
-    const spacing = 200
+    const positions = spiralLayout(pages.length)
+
+    // Build edge map to count incoming links per page
+    const incomingCount = new Map<string, number>()
+    pages.forEach((page) => {
+      parseLinks(page.content).forEach((targetId) => {
+        if (pages.some((p) => p.id === targetId)) {
+          incomingCount.set(targetId, (incomingCount.get(targetId) ?? 0) + 1)
+        }
+      })
+    })
 
     const nodes: Node[] = pages.map((page, i) => ({
       id: page.id,
-      data: { label: page.title || 'Sem título' },
-      position: {
-        x: (i % cols) * spacing,
-        y: Math.floor(i / cols) * spacing,
-      },
-      style: {
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '8px',
-        color: 'var(--foreground)',
-        fontSize: '12px',
-        padding: '8px 12px',
-        cursor: 'pointer',
-        maxWidth: '160px',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-      },
+      type: 'page',
+      data: {
+        label: page.title || 'Sem título',
+        icon: page.icon,
+        linkCount: incomingCount.get(page.id) ?? 0,
+      } as PageNodeData,
+      position: positions[i] ?? { x: i * 220, y: 0 },
     }))
 
     const edgeSet = new Set<string>()
     const edges: Edge[] = []
 
     pages.forEach((page) => {
-      const targets = parseLinks(page.content)
-      targets.forEach((targetId) => {
+      parseLinks(page.content).forEach((targetId) => {
         const key = `${page.id}->${targetId}`
         if (!edgeSet.has(key) && pages.some((p) => p.id === targetId)) {
           edgeSet.add(key)
@@ -81,7 +151,7 @@ export function GraphView() {
             id: key,
             source: page.id,
             target: targetId,
-            style: { stroke: 'var(--primary)', strokeWidth: 1.5, opacity: 0.6 },
+            style: { stroke: 'var(--primary)', strokeWidth: 1.5, opacity: 0.5 },
             animated: false,
           })
         }
@@ -91,27 +161,43 @@ export function GraphView() {
     return { nodes, edges }
   }, [pages])
 
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      const page = pages.find((p) => p.id === node.id)
+      if (page) navigate(`/w/${page.workspaceId}/p/${page.id}`)
+    },
+    [pages, navigate],
+  )
+
   if (!activeWorkspace) return null
+
+  const isolated = pages.length - new Set(edges.flatMap((e) => [e.source, e.target])).size
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-border shrink-0">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-border shrink-0">
         <span className="text-sm font-medium text-foreground">Grafo de conhecimento</span>
-        <span className="text-xs text-muted-foreground ml-1">
-          {pages.length} {pages.length === 1 ? 'página' : 'páginas'} · {edges.length} {edges.length === 1 ? 'link' : 'links'}
+        <span className="text-xs text-muted-foreground">
+          {pages.length} {pages.length === 1 ? 'página' : 'páginas'}
         </span>
+        <span className="text-xs text-muted-foreground">
+          · {edges.length} {edges.length === 1 ? 'link' : 'links'}
+        </span>
+        {isolated > 0 && (
+          <span className="text-xs text-muted-foreground/50">
+            · {isolated} isoladas
+          </span>
+        )}
       </div>
 
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
-          onNodeClick={(_, node) => {
-            const page = pages.find((p) => p.id === node.id)
-            if (page) navigate(`/w/${page.workspaceId}/p/${page.id}`)
-          }}
+          fitViewOptions={{ padding: 0.15 }}
+          onNodeClick={onNodeClick}
           proOptions={{ hideAttribution: true }}
         >
           <Background
@@ -133,8 +219,8 @@ export function GraphView() {
               border: '1px solid var(--border)',
               borderRadius: '8px',
             }}
-            nodeColor="var(--primary)"
-            maskColor="rgba(0,0,0,0.3)"
+            nodeColor={(n) => (n.data as PageNodeData).linkCount > 0 ? 'var(--primary)' : 'var(--border)'}
+            maskColor="rgba(0,0,0,0.25)"
           />
         </ReactFlow>
       </div>

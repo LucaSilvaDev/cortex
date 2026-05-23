@@ -16,7 +16,7 @@ interface CreateFolderInput {
   name?: string
 }
 
-type PageUpdate = Partial<Pick<Page, 'title' | 'content' | 'icon' | 'order' | 'folderId' | 'tags' | 'isPinned'>>
+type PageUpdate = Partial<Pick<Page, 'title' | 'content' | 'icon' | 'coverImage' | 'order' | 'folderId' | 'tags' | 'isPinned'>>
 type FolderUpdate = Partial<Pick<Folder, 'name' | 'icon' | 'order' | 'parentId'>>
 
 interface PageState {

@@ -5,12 +5,13 @@ import { usePageStore } from '@/stores/pageStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useAutosave } from '@/hooks/useAutosave'
 import { motion } from 'framer-motion'
-import { Maximize2, Smile } from 'lucide-react'
+import { ImageIcon, Maximize2, Smile } from 'lucide-react'
 import { Editor } from '@/components/editor/Editor'
 import { TableOfContents } from '@/components/editor/TableOfContents'
 import { TagPicker } from '@/components/tags/TagPicker'
 import { BacklinksPanel } from '@/components/BacklinksPanel'
 import { EmojiPicker } from '@/components/ui/EmojiPicker'
+import { CoverPicker } from '@/components/ui/CoverPicker'
 import { registerSaveFn, registerPageDataFn } from '@/lib/savebridge'
 import { cn } from '@/lib/utils'
 import type { Editor as TipTapEditor, JSONContent } from '@tiptap/core'
@@ -42,8 +43,19 @@ export function PageView() {
   const [content, setContent] = useState(page?.content ?? '')
   const [tags, setTags] = useState(page?.tags ?? [])
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false)
   const [editorInstance, setEditorInstance] = useState<TipTapEditor | null>(null)
   const handleEditorReady = useCallback((e: TipTapEditor) => setEditorInstance(e), [])
+
+  function handleCoverSelect(value: string) {
+    if (pageId) void updatePage(pageId, { coverImage: value })
+    setCoverPickerOpen(false)
+  }
+
+  function handleCoverRemove() {
+    if (pageId) void updatePage(pageId, { coverImage: undefined })
+    setCoverPickerOpen(false)
+  }
 
   useEffect(() => {
     setTitle(page?.title ?? '')
@@ -93,11 +105,35 @@ export function PageView() {
 
   return (
     <motion.div
-      className={cn('mx-auto px-8 py-10', focusMode ? 'max-w-2xl' : 'max-w-3xl')}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >
+      {/* Cover image / gradient */}
+      {page.coverImage && (
+        <div
+          className="relative w-full h-44 group"
+          style={
+            page.coverImage.startsWith('data:')
+              ? { backgroundImage: `url(${page.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              : { background: page.coverImage }
+          }
+        >
+          {!focusMode && (
+            <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+              <button
+                onClick={() => setCoverPickerOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur-sm text-white text-xs hover:bg-black/60 transition-colors"
+              >
+                <ImageIcon size={11} />
+                Alterar capa
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className={cn('mx-auto px-8 py-10', focusMode ? 'max-w-2xl' : 'max-w-3xl')}>
       {/* Focus mode toggle button */}
       {!focusMode && (
         <button
@@ -108,6 +144,41 @@ export function PageView() {
         >
           <Maximize2 size={14} />
         </button>
+      )}
+
+      {/* Cover + icon toolbar */}
+      {!focusMode && (
+        <div className="flex items-center gap-2 mb-3 relative">
+          {!page.coverImage && (
+            <div className="relative">
+              <button
+                onClick={() => setCoverPickerOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary/40 transition-colors"
+              >
+                <ImageIcon size={12} />
+                Adicionar capa
+              </button>
+              {coverPickerOpen && (
+                <CoverPicker
+                  hasExisting={false}
+                  onSelect={handleCoverSelect}
+                  onRemove={handleCoverRemove}
+                  onClose={() => setCoverPickerOpen(false)}
+                />
+              )}
+            </div>
+          )}
+          {page.coverImage && coverPickerOpen && (
+            <div className="relative">
+              <CoverPicker
+                hasExisting
+                onSelect={handleCoverSelect}
+                onRemove={handleCoverRemove}
+                onClose={() => setCoverPickerOpen(false)}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Page icon */}
@@ -197,6 +268,7 @@ export function PageView() {
           {Math.max(1, Math.ceil(wordCount / 200))} min de leitura
         </p>
       )}
+      </div>
     </motion.div>
   )
 }
