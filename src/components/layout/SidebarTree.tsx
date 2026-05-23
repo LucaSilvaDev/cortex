@@ -25,6 +25,7 @@ import {
   FolderOpen,
   GripVertical,
   Pencil,
+  Pin,
   Plus,
   Trash2,
 } from 'lucide-react'
@@ -98,6 +99,7 @@ interface PageRowProps {
   onCancelRename: () => void
   onStartRename: (id: string, name: string) => void
   onDelete: (page: Page) => void
+  onPin: (page: Page) => void
   onNavigate: (id: string) => void
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
 }
@@ -113,6 +115,7 @@ function PageRow({
   onCancelRename,
   onStartRename,
   onDelete,
+  onPin,
   onNavigate,
   dragHandleProps,
 }: PageRowProps) {
@@ -165,6 +168,17 @@ function PageRow({
       {!isEditing && (
         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0">
           <button
+            onClick={(e) => { e.stopPropagation(); onPin(page) }}
+            className={cn(
+              'p-0.5 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              page.isPinned ? 'text-primary opacity-100 !opacity-100' : 'hover:text-foreground',
+            )}
+            aria-label={page.isPinned ? 'Desafixar página' : 'Fixar página'}
+            title={page.isPinned ? 'Desafixar' : 'Fixar no topo'}
+          >
+            <Pin size={11} className={page.isPinned ? 'fill-current' : ''} />
+          </button>
+          <button
             onClick={(e) => { e.stopPropagation(); onStartRename(page.id, page.title) }}
             className="p-0.5 rounded hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label="Renomear página"
@@ -199,6 +213,7 @@ interface FolderRowProps {
   onStartRename: (id: string, name: string) => void
   onToggle: () => void
   onDelete: (page: Page) => void
+  onPin: (page: Page) => void
   onDeleteFolder: (folder: FolderType) => void
   onCreatePage: (folderId: string) => void
   onNavigate: (id: string) => void
@@ -218,6 +233,7 @@ function FolderRow({
   onStartRename,
   onToggle,
   onDelete,
+  onPin,
   onDeleteFolder,
   onCreatePage,
   onNavigate,
@@ -321,6 +337,7 @@ function FolderRow({
                   onCancelRename={onCancelRename}
                   onStartRename={onStartRename}
                   onDelete={onDelete}
+                  onPin={onPin}
                   onNavigate={onNavigate}
                 />
               ))
@@ -448,6 +465,10 @@ export function SidebarTree() {
     }, 80)
   }
 
+  const handlePin = async (page: Page) => {
+    await updatePage(page.id, { isPinned: !page.isPinned })
+  }
+
   const handleDeletePage = async (page: Page) => {
     if (!window.confirm(`Deletar "${page.title || 'Sem título'}"?`)) return
     await deletePage(page.id)
@@ -513,12 +534,38 @@ export function SidebarTree() {
           </div>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={rootItems.map((i) => i.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="flex-1 overflow-y-auto px-2 pb-2">
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          {/* Pinned pages section */}
+          {pages.filter((p) => p.isPinned).length > 0 && (
+            <div className="mb-2">
+              <p className="px-1 py-1 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
+                Fixadas
+              </p>
+              {pages.filter((p) => p.isPinned).sort((a, b) => a.order - b.order).map((page) => (
+                <PageRow
+                  key={`pin-${page.id}`}
+                  page={page}
+                  activePage={activePageId === page.id}
+                  editingId={editingId}
+                  editingValue={editingValue}
+                  onEditChange={setEditingValue}
+                  onCommitRename={commitRename}
+                  onCancelRename={cancelRename}
+                  onStartRename={startRename}
+                  onDelete={handleDeletePage}
+                  onPin={handlePin}
+                  onNavigate={(id) => navigate(`/w/${activeWorkspaceId}/p/${id}`)}
+                />
+              ))}
+              <div className="h-px bg-border mx-1 my-1.5" />
+            </div>
+          )}
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={rootItems.map((i) => i.id)}
+              strategy={verticalListSortingStrategy}
+            >
               {rootItems.map((item) =>
                 item.kind === 'folder' ? (
                   <SortableItem key={item.id} id={item.id}>
@@ -547,6 +594,7 @@ export function SidebarTree() {
                             })
                           }
                           onDelete={handleDeletePage}
+                          onPin={handlePin}
                           onDeleteFolder={handleDeleteFolder}
                           onCreatePage={handleCreatePage}
                           onNavigate={(id) => navigate(`/w/${activeWorkspaceId}/p/${id}`)}
@@ -570,6 +618,7 @@ export function SidebarTree() {
                           onCancelRename={cancelRename}
                           onStartRename={startRename}
                           onDelete={handleDeletePage}
+                          onPin={handlePin}
                           onNavigate={(id) => navigate(`/w/${activeWorkspaceId}/p/${id}`)}
                           dragHandleProps={handleProps}
                         />
@@ -578,9 +627,9 @@ export function SidebarTree() {
                   </SortableItem>
                 ),
               )}
-            </div>
-          </SortableContext>
-        </DndContext>
+            </SortableContext>
+          </DndContext>
+        </div>
       )}
 
       <TemplateModal

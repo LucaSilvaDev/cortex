@@ -28,6 +28,7 @@ export interface Page extends BaseEntity {
   coverImage?: string
   tags: string[]
   isPublished: boolean
+  isPinned?: boolean
 }
 
 export interface Tag extends BaseEntity {
