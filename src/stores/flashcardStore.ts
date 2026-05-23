@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { nanoid } from 'nanoid'
-import { db } from '@/lib/db'
+import { supabase, toFlashcard, type FlashcardRow } from '@/lib/supabase'
 import type { Flashcard } from '@/types/db'
 import { applyReview, isDue, INITIAL_SM, type SMRating } from '@/lib/sm2'
 
@@ -20,34 +20,46 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   isLoaded: false,
 
   load: async (workspaceId) => {
-    const cards = await db.flashcards.where('workspaceId').equals(workspaceId).toArray()
-    set({ cards, isLoaded: true })
+    const { data } = await supabase
+      .from('flashcards')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+    set({ cards: (data as FlashcardRow[] ?? []).map(toFlashcard), isLoaded: true })
   },
 
   add: async (data) => {
     const now = Date.now()
-    const card: Flashcard = {
+    const { data: { user } } = await supabase.auth.getUser()
+    const row: FlashcardRow = {
       id: nanoid(),
-      ...data,
-      ...INITIAL_SM,
-      createdAt: now,
-      updatedAt: now,
+      workspace_id: data.workspaceId,
+      user_id: user!.id,
+      page_id: data.pageId || null,
+      front: data.front,
+      back: data.back,
+      interval: INITIAL_SM.interval,
+      repetitions: INITIAL_SM.repetitions,
+      ease_factor: INITIAL_SM.easeFactor,
+      due_date: INITIAL_SM.dueDate,
+      created_at: now,
+      updated_at: now,
     }
-    await db.flashcards.add(card)
+    await supabase.from('flashcards').insert(row)
+    const card = toFlashcard(row)
     set((s) => ({ cards: [...s.cards, card] }))
     return card
   },
 
   update: async (id, data) => {
     const updatedAt = Date.now()
-    await db.flashcards.update(id, { ...data, updatedAt })
+    await supabase.from('flashcards').update({ ...data, updated_at: updatedAt }).eq('id', id)
     set((s) => ({
-      cards: s.cards.map((c) => (c.id === id ? { ...c, ...data, updatedAt } : c)),
+      cards: s.cards.map((c) => c.id === id ? { ...c, ...data, updatedAt } : c),
     }))
   },
 
   remove: async (id) => {
-    await db.flashcards.delete(id)
+    await supabase.from('flashcards').delete().eq('id', id)
     set((s) => ({ cards: s.cards.filter((c) => c.id !== id) }))
   },
 
@@ -56,9 +68,15 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     if (!card) return
     const next = applyReview(card, rating)
     const updatedAt = Date.now()
-    await db.flashcards.update(id, { ...next, updatedAt })
+    await supabase.from('flashcards').update({
+      interval: next.interval,
+      repetitions: next.repetitions,
+      ease_factor: next.easeFactor,
+      due_date: next.dueDate,
+      updated_at: updatedAt,
+    }).eq('id', id)
     set((s) => ({
-      cards: s.cards.map((c) => (c.id === id ? { ...c, ...next, updatedAt } : c)),
+      cards: s.cards.map((c) => c.id === id ? { ...c, ...next, updatedAt } : c),
     }))
   },
 

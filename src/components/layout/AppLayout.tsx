@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Minimize2 } from 'lucide-react'
 import { useUIStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useAuthStore } from '@/stores/authStore'
+import { AuthPage } from '@/pages/AuthPage'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { Resizer } from './Resizer'
@@ -28,6 +30,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen)
   const shortcutsOpen = useUIStore((s) => s.shortcutsOpen)
   const { isLoaded, load } = useWorkspaceStore()
+  const { user, loading: authLoading, init } = useAuthStore()
+
+  useEffect(() => { init() }, [init])
 
   const [transitioning, setTransitioning] = useState(false)
   const prevOpenRef = useRef(sidebarOpen)
@@ -45,8 +50,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [theme])
 
   useEffect(() => {
-    if (!isLoaded) load()
-  }, [isLoaded, load])
+    if (user && !isLoaded) load()
+  }, [user, isLoaded, load])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -81,6 +86,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [focusMode, commandPaletteOpen, shortcutsOpen, setCommandPaletteOpen, setShortcutsOpen, toggleTheme, toggleSidebar, toggleFocusMode])
+
+  if (authLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) return <AuthPage />
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { db } from '@/lib/db'
+import { supabase, toWorkspace, type WorkspaceRow } from '@/lib/supabase'
 import { generateId } from '@/lib/utils/id'
 import type { Workspace } from '@/types/db'
 
@@ -27,31 +27,44 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
   isLoaded: false,
 
   load: async () => {
-    const workspaces = await db.workspaces.orderBy('order').toArray()
+    const { data } = await supabase
+      .from('workspaces')
+      .select('*')
+      .order('order')
+    const workspaces = (data as WorkspaceRow[] ?? []).map(toWorkspace)
     set({ workspaces, isLoaded: true })
   },
 
   create: async (input) => {
     const now = Date.now()
     const { workspaces } = get()
-    const workspace: Workspace = {
+    const { data: { user } } = await supabase.auth.getUser()
+    const row: WorkspaceRow = {
       id: generateId(),
+      user_id: user!.id,
       name: input.name,
       icon: input.icon,
       color: input.color,
-      description: input.description,
+      description: input.description ?? null,
       order: workspaces.length,
-      createdAt: now,
-      updatedAt: now,
+      created_at: now,
+      updated_at: now,
     }
-    await db.workspaces.add(workspace)
+    await supabase.from('workspaces').insert(row)
+    const workspace = toWorkspace(row)
     set({ workspaces: [...workspaces, workspace] })
     return workspace
   },
 
   update: async (id, data) => {
     const now = Date.now()
-    await db.workspaces.update(id, { ...data, updatedAt: now })
+    await supabase.from('workspaces').update({
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.icon !== undefined && { icon: data.icon }),
+      ...(data.color !== undefined && { color: data.color }),
+      ...(data.description !== undefined && { description: data.description }),
+      updated_at: now,
+    }).eq('id', id)
     set((state) => ({
       workspaces: state.workspaces.map((w) =>
         w.id === id ? { ...w, ...data, updatedAt: now } : w,
@@ -60,11 +73,7 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
   },
 
   remove: async (id) => {
-    await db.transaction('rw', [db.workspaces, db.folders, db.pages], async () => {
-      await db.workspaces.delete(id)
-      await db.folders.where('workspaceId').equals(id).delete()
-      await db.pages.where('workspaceId').equals(id).delete()
-    })
+    await supabase.from('workspaces').delete().eq('id', id)
     set((state) => ({
       workspaces: state.workspaces.filter((w) => w.id !== id),
       activeWorkspaceId: state.activeWorkspaceId === id ? null : state.activeWorkspaceId,

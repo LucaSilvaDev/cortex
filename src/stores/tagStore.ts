@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { db } from '@/lib/db'
+import { supabase, toTag, type TagRow } from '@/lib/supabase'
 import { generateId } from '@/lib/utils/id'
 import type { Tag } from '@/types/db'
 
@@ -17,36 +17,43 @@ export const useTagStore = create<TagState>()((set, get) => ({
   isLoaded: false,
 
   loadForWorkspace: async (workspaceId) => {
-    const tags = await db.tags.where('workspaceId').equals(workspaceId).sortBy('order')
-    set({ tags, isLoaded: true })
+    const { data } = await supabase
+      .from('tags')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('order')
+    set({ tags: (data as TagRow[] ?? []).map(toTag), isLoaded: true })
   },
 
   create: async (workspaceId, name, color) => {
     const now = Date.now()
-    const tag: Tag = {
+    const { data: { user } } = await supabase.auth.getUser()
+    const row: TagRow = {
       id: generateId(),
-      workspaceId,
+      workspace_id: workspaceId,
+      user_id: user!.id,
       name,
       color,
       order: get().tags.length,
-      createdAt: now,
-      updatedAt: now,
+      created_at: now,
+      updated_at: now,
     }
-    await db.tags.add(tag)
-    set({ tags: [...get().tags, tag] })
+    await supabase.from('tags').insert(row)
+    const tag = toTag(row)
+    set((s) => ({ tags: [...s.tags, tag] }))
     return tag
   },
 
   update: async (id, data) => {
     const now = Date.now()
-    await db.tags.update(id, { ...data, updatedAt: now })
+    await supabase.from('tags').update({ ...data, updated_at: now }).eq('id', id)
     set((state) => ({
-      tags: state.tags.map((t) => (t.id === id ? { ...t, ...data, updatedAt: now } : t)),
+      tags: state.tags.map((t) => t.id === id ? { ...t, ...data, updatedAt: now } : t),
     }))
   },
 
   remove: async (id) => {
-    await db.tags.delete(id)
+    await supabase.from('tags').delete().eq('id', id)
     set((state) => ({ tags: state.tags.filter((t) => t.id !== id) }))
   },
 }))

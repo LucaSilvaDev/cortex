@@ -1,4 +1,4 @@
-import { BookOpen, GitFork, Hash, HelpCircle, Moon, Search, Sun } from 'lucide-react'
+import { BookOpen, GitFork, Hash, HelpCircle, LogOut, Moon, Search, Sun } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUIStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -8,6 +8,7 @@ import { usePageStore } from '@/stores/pageStore'
 import { useFlashcardStore } from '@/stores/flashcardStore'
 import { ReviewModal } from '@/components/flashcards/ReviewModal'
 import { useState } from 'react'
+import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 function FooterButton({
@@ -62,6 +63,7 @@ export function SidebarFooter() {
   const [reviewOpen, setReviewOpen] = useState(false)
 
   const { dueCards, cards, isLoaded, load } = useFlashcardStore()
+  const { user, signOut } = useAuthStore()
 
   const wsId = routeWsId ?? activeWorkspaceId
   const isGraph = location.pathname.endsWith('/graph')
@@ -169,6 +171,19 @@ export function SidebarFooter() {
         onClick={() => setShortcutsOpen(true)}
         kbd="?"
       />
+
+      {user && (
+        <div className="pt-1 border-t border-border mt-1">
+          <button
+            onClick={signOut}
+            title="Sair da conta"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut size={14} className="shrink-0" />
+            <span className="flex-1 text-left truncate text-xs">{user.email}</span>
+          </button>
+        </div>
+      )}
     </div>
     </>
   )

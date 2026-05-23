@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { db } from '@/lib/db'
+import { supabase, toPage, toFolder, type PageRow, type FolderRow } from '@/lib/supabase'
 import { generateId } from '@/lib/utils/id'
 import type { Folder, Page } from '@/types/db'
 
@@ -40,82 +40,103 @@ export const usePageStore = create<PageState>()((set, get) => ({
   isLoaded: false,
 
   loadForWorkspace: async (workspaceId) => {
-    const [folders, pages] = await Promise.all([
-      db.folders.where('workspaceId').equals(workspaceId).sortBy('order'),
-      db.pages.where('workspaceId').equals(workspaceId).sortBy('order'),
+    const [{ data: fData }, { data: pData }] = await Promise.all([
+      supabase.from('folders').select('*').eq('workspace_id', workspaceId).order('order'),
+      supabase.from('pages').select('*').eq('workspace_id', workspaceId).order('order'),
     ])
-    set({ folders, pages, workspaceId, isLoaded: true })
+    set({
+      folders: (fData as FolderRow[] ?? []).map(toFolder),
+      pages: (pData as PageRow[] ?? []).map(toPage),
+      workspaceId,
+      isLoaded: true,
+    })
   },
 
   createPage: async ({ workspaceId, folderId = null, title = '', content = '' }) => {
     const now = Date.now()
     const { pages } = get()
-    const siblings = pages.filter((p) => p.folderId === folderId)
-    const page: Page = {
+    const { data: { user } } = await supabase.auth.getUser()
+    const row: PageRow = {
       id: generateId(),
-      workspaceId,
-      folderId,
+      workspace_id: workspaceId,
+      user_id: user!.id,
+      folder_id: folderId,
       title,
       content,
+      icon: null,
+      cover_image: null,
       tags: [],
-      isPublished: false,
-      order: siblings.length,
-      createdAt: now,
-      updatedAt: now,
+      is_published: false,
+      is_pinned: null,
+      order: pages.filter((p) => p.folderId === folderId).length,
+      created_at: now,
+      updated_at: now,
     }
-    await db.pages.add(page)
+    await supabase.from('pages').insert(row)
+    const page = toPage(row)
     set({ pages: [...get().pages, page] })
     return page
   },
 
   updatePage: async (id, data) => {
     const now = Date.now()
-    await db.pages.update(id, { ...data, updatedAt: now })
+    const dbData: Record<string, unknown> = { updated_at: now }
+    if (data.title !== undefined) dbData.title = data.title
+    if (data.content !== undefined) dbData.content = data.content
+    if (data.icon !== undefined) dbData.icon = data.icon ?? null
+    if (data.coverImage !== undefined) dbData.cover_image = data.coverImage ?? null
+    if (data.order !== undefined) dbData.order = data.order
+    if (data.folderId !== undefined) dbData.folder_id = data.folderId
+    if (data.tags !== undefined) dbData.tags = data.tags
+    if (data.isPinned !== undefined) dbData.is_pinned = data.isPinned
+    await supabase.from('pages').update(dbData).eq('id', id)
     set((state) => ({
-      pages: state.pages.map((p) =>
-        p.id === id ? { ...p, ...data, updatedAt: now } : p,
-      ),
+      pages: state.pages.map((p) => p.id === id ? { ...p, ...data, updatedAt: now } : p),
     }))
   },
 
   deletePage: async (id) => {
-    await db.pages.delete(id)
+    await supabase.from('pages').delete().eq('id', id)
     set((state) => ({ pages: state.pages.filter((p) => p.id !== id) }))
   },
 
   createFolder: async ({ workspaceId, parentId = null, name = '' }) => {
     const now = Date.now()
     const { folders } = get()
-    const siblings = folders.filter((f) => f.parentId === parentId)
-    const folder: Folder = {
+    const { data: { user } } = await supabase.auth.getUser()
+    const row: FolderRow = {
       id: generateId(),
-      workspaceId,
-      parentId,
+      workspace_id: workspaceId,
+      user_id: user!.id,
+      parent_id: parentId,
       name,
-      order: siblings.length,
-      createdAt: now,
-      updatedAt: now,
+      icon: null,
+      order: folders.filter((f) => f.parentId === parentId).length,
+      created_at: now,
+      updated_at: now,
     }
-    await db.folders.add(folder)
+    await supabase.from('folders').insert(row)
+    const folder = toFolder(row)
     set({ folders: [...get().folders, folder] })
     return folder
   },
 
   updateFolder: async (id, data) => {
     const now = Date.now()
-    await db.folders.update(id, { ...data, updatedAt: now })
+    const dbData: Record<string, unknown> = { updated_at: now }
+    if (data.name !== undefined) dbData.name = data.name
+    if (data.icon !== undefined) dbData.icon = data.icon ?? null
+    if (data.order !== undefined) dbData.order = data.order
+    if (data.parentId !== undefined) dbData.parent_id = data.parentId
+    await supabase.from('folders').update(dbData).eq('id', id)
     set((state) => ({
-      folders: state.folders.map((f) =>
-        f.id === id ? { ...f, ...data, updatedAt: now } : f,
-      ),
+      folders: state.folders.map((f) => f.id === id ? { ...f, ...data, updatedAt: now } : f),
     }))
   },
 
   deleteFolder: async (id) => {
-    await db.transaction('rw', [db.folders, db.pages], async () => {
-      await db.folders.delete(id)
-      await db.pages.where('folderId').equals(id).delete()
-    })
+    await supabase.from('pages').delete().eq('folder_id', id)
+    await supabase.from('folders').delete().eq('id', id)
     set((state) => ({
       folders: state.folders.filter((f) => f.id !== id),
       pages: state.pages.filter((p) => p.folderId !== id),
