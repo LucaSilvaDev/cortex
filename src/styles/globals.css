@@ -274,6 +274,50 @@
   color: var(--primary-foreground);
 }
 
+/* ─── Tables ────────────────────────────────────────────────────────── */
+
+.cortex-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.9em;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.cortex-table td,
+.cortex-table th {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  min-width: 80px;
+  position: relative;
+}
+
+.cortex-table th {
+  background-color: var(--secondary);
+  font-weight: 600;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted-foreground);
+}
+
+.cortex-table td > *,
+.cortex-table th > * {
+  margin: 0;
+}
+
+.cortex-table .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
 /* ─── Mermaid diagrams ──────────────────────────────────────────────── */
 
 .mermaid-output svg {

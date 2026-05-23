@@ -18,6 +18,7 @@ import {
   ListOrdered,
   Minus,
   Quote,
+  Table,
   Type,
   XCircle,
   GitBranch,
@@ -167,6 +168,14 @@ const COMMANDS: SlashCommandItem[] = [
       e.chain().focus().deleteRange(r).setMermaidBlock({
         code: 'sequenceDiagram\n  Cliente->>Servidor: GET /api/dados\n  Servidor->>Banco: SELECT *\n  Banco-->>Servidor: rows\n  Servidor-->>Cliente: 200 OK',
       }).run(),
+  },
+  {
+    title: 'Tabela',
+    description: 'Tabela editável com linhas e colunas',
+    Icon: Table,
+    keywords: ['table', 'tabela', 'grid', 'planilha', 'rows', 'cols'],
+    command: (e, r) =>
+      e.chain().focus().deleteRange(r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
   {
     title: 'Flashcard',

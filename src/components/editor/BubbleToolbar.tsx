@@ -1,5 +1,5 @@
 import { BubbleMenu, type Editor } from '@tiptap/react'
-import { Bold, Code, Italic, Link, Strikethrough } from 'lucide-react'
+import { Bold, Code, Italic, Link, Plus, RowsIcon, Strikethrough, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface BubbleToolbarProps {
@@ -46,12 +46,45 @@ export function BubbleToolbar({ editor }: BubbleToolbarProps) {
   }
 
   return (
+    <>
+    {/* Table toolbar — shown when cursor is inside a table cell */}
+    <BubbleMenu
+      editor={editor}
+      pluginKey="tableMenu"
+      tippyOptions={{ duration: 100, placement: 'top-start' }}
+      shouldShow={({ editor }) => editor.isActive('table')}
+    >
+      <div className="flex items-center gap-0.5 px-1.5 py-1.5 bg-surface/95 backdrop-blur-xl border border-border rounded-lg shadow-xl shadow-black/30">
+        <ToolbarButton label="Adicionar linha abaixo" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowAfter().run() }}>
+          <Plus size={12} />
+          <RowsIcon size={11} />
+        </ToolbarButton>
+        <ToolbarButton label="Adicionar coluna à direita" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnAfter().run() }}>
+          <Plus size={12} />
+          <span className="text-[10px] font-mono leading-none">col</span>
+        </ToolbarButton>
+        <div className="w-px h-4 bg-border mx-0.5" />
+        <ToolbarButton label="Deletar linha" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteRow().run() }}>
+          <Trash2 size={11} />
+          <RowsIcon size={11} />
+        </ToolbarButton>
+        <ToolbarButton label="Deletar coluna" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteColumn().run() }}>
+          <Trash2 size={11} />
+          <span className="text-[10px] font-mono leading-none">col</span>
+        </ToolbarButton>
+        <div className="w-px h-4 bg-border mx-0.5" />
+        <ToolbarButton label="Deletar tabela" className="hover:text-destructive" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteTable().run() }}>
+          <Trash2 size={12} />
+        </ToolbarButton>
+      </div>
+    </BubbleMenu>
+
     <BubbleMenu
       editor={editor}
       tippyOptions={{ duration: 100, placement: 'top-start' }}
       shouldShow={({ editor, from, to }) => {
         if (from === to) return false
-        return !editor.isActive('codeBlock') && !editor.isActive('callout')
+        return !editor.isActive('codeBlock') && !editor.isActive('callout') && !editor.isActive('table')
       }}
     >
       <div className="flex items-center gap-0.5 px-1.5 py-1.5 bg-surface/95 backdrop-blur-xl border border-border rounded-lg shadow-xl shadow-black/30">
@@ -113,5 +146,6 @@ export function BubbleToolbar({ editor }: BubbleToolbarProps) {
         </ToolbarButton>
       </div>
     </BubbleMenu>
+    </>
   )
 }

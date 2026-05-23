@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { usePageStore } from '@/stores/pageStore'
@@ -7,12 +7,13 @@ import { useAutosave } from '@/hooks/useAutosave'
 import { motion } from 'framer-motion'
 import { Maximize2, Smile } from 'lucide-react'
 import { Editor } from '@/components/editor/Editor'
+import { TableOfContents } from '@/components/editor/TableOfContents'
 import { TagPicker } from '@/components/tags/TagPicker'
 import { BacklinksPanel } from '@/components/BacklinksPanel'
 import { EmojiPicker } from '@/components/ui/EmojiPicker'
 import { registerSaveFn, registerPageDataFn } from '@/lib/savebridge'
 import { cn } from '@/lib/utils'
-import type { JSONContent } from '@tiptap/core'
+import type { Editor as TipTapEditor, JSONContent } from '@tiptap/core'
 
 function countWords(contentJson: string): number {
   try {
@@ -41,6 +42,8 @@ export function PageView() {
   const [content, setContent] = useState(page?.content ?? '')
   const [tags, setTags] = useState(page?.tags ?? [])
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [editorInstance, setEditorInstance] = useState<TipTapEditor | null>(null)
+  const handleEditorReady = useCallback((e: TipTapEditor) => setEditorInstance(e), [])
 
   useEffect(() => {
     setTitle(page?.title ?? '')
@@ -173,11 +176,15 @@ export function PageView() {
         />
       </div>
 
+      {/* Table of Contents — floats right, only when there are 2+ headings */}
+      {!focusMode && <TableOfContents editor={editorInstance} />}
+
       {/* Editor */}
       <Editor
         pageId={page.id}
         initialContent={content}
         onChange={setContent}
+        onEditorReady={handleEditorReady}
       />
 
       <BacklinksPanel pageId={page.id} />
