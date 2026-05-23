@@ -9,6 +9,7 @@ import Link from '@tiptap/extension-link'
 import Typography from '@tiptap/extension-typography'
 import { usePageStore } from '@/stores/pageStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { registerGetHtmlFn } from '@/lib/savebridge'
 import { Callout } from './extensions/callout'
 import { MonacoBlock } from './extensions/monacoBlock'
 import { MermaidBlock } from './extensions/mermaidBlock'
@@ -83,6 +84,12 @@ export function Editor({ pageId, initialContent, onChange }: EditorProps) {
       else if (activeWorkspaceId) navigate(`/w/${activeWorkspaceId}/p/${targetPageId}`)
     })
   }, [pages, navigate, activeWorkspaceId])
+
+  useEffect(() => {
+    if (!editor) return
+    registerGetHtmlFn(() => editor.getHTML())
+    return () => registerGetHtmlFn(null)
+  }, [editor])
 
   // Reload content when navigating between pages
   useEffect(() => {

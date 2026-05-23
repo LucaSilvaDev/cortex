@@ -1,11 +1,12 @@
-import { Check, ChevronRight, Download, GitFork, Loader2, Maximize2, PanelLeft, Save, Search, Sun, Moon } from 'lucide-react'
+import { Check, ChevronRight, Download, FileText, GitFork, Loader2, Maximize2, PanelLeft, Printer, Save, Search, Sun, Moon } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUIStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { usePageStore } from '@/stores/pageStore'
-import { invokeSave, getPageData } from '@/lib/savebridge'
+import { invokeSave, getPageData, getPageHtml } from '@/lib/savebridge'
 import { exportAsMarkdown } from '@/lib/markdownExport'
+import { exportAsPdf } from '@/lib/pdfExport'
 import { cn } from '@/lib/utils'
 
 type SaveState = 'idle' | 'saving' | 'saved'
@@ -24,11 +25,31 @@ export function Topbar() {
   const isGraphView = location.pathname.endsWith('/graph')
 
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportRef = useRef<HTMLDivElement>(null)
 
-  function handleExport() {
+  useEffect(() => {
+    if (!exportOpen) return
+    function onClickOutside(e: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [exportOpen])
+
+  function handleExportMarkdown() {
     const data = getPageData()
     if (!data) return
     exportAsMarkdown(data.title || 'Sem título', data.content)
+    setExportOpen(false)
+  }
+
+  function handleExportPdf() {
+    const data = getPageData()
+    const html = getPageHtml()
+    if (!data) return
+    exportAsPdf(data.title || 'Sem título', html)
+    setExportOpen(false)
   }
 
   async function handleSave() {
@@ -152,21 +173,43 @@ export function Topbar() {
         </button>
       )}
 
-      {/* Export button — only on page views */}
+      {/* Export dropdown — only on page views */}
       {pageId && (
-        <button
-          onClick={handleExport}
-          title="Exportar como Markdown"
-          className={cn(
-            'p-1.5 rounded-md text-muted-foreground',
-            'hover:text-foreground hover:bg-secondary',
-            'transition-colors duration-150',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        <div ref={exportRef} className="relative">
+          <button
+            onClick={() => setExportOpen((v) => !v)}
+            title="Exportar página"
+            className={cn(
+              'p-1.5 rounded-md text-muted-foreground',
+              'hover:text-foreground hover:bg-secondary',
+              'transition-colors duration-150',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              exportOpen && 'text-foreground bg-secondary',
+            )}
+            aria-label="Exportar página"
+          >
+            <Download size={16} />
+          </button>
+
+          {exportOpen && (
+            <div className="cortex-popup absolute right-0 top-full mt-1.5 w-44 bg-surface border border-border rounded-lg shadow-lg shadow-black/30 py-1 z-50">
+              <button
+                onClick={handleExportMarkdown}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
+              >
+                <FileText size={13} className="text-muted-foreground" />
+                Markdown (.md)
+              </button>
+              <button
+                onClick={handleExportPdf}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
+              >
+                <Printer size={13} className="text-muted-foreground" />
+                PDF / Imprimir
+              </button>
+            </div>
           )}
-          aria-label="Exportar como Markdown"
-        >
-          <Download size={16} />
-        </button>
+        </div>
       )}
 
       {/* Save button — only on page views */}

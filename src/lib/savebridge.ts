@@ -3,6 +3,7 @@
 
 let _saveFn: (() => Promise<void>) | null = null
 let _getPageData: (() => { title: string; content: string }) | null = null
+let _getHtml: (() => string) | null = null
 
 export function registerSaveFn(fn: (() => Promise<void>) | null) {
   _saveFn = fn
@@ -18,6 +19,14 @@ export function invokeSave(): Promise<void> | undefined {
 
 export function getPageData() {
   return _getPageData?.() ?? null
+}
+
+export function registerGetHtmlFn(fn: (() => string) | null) {
+  _getHtml = fn
+}
+
+export function getPageHtml(): string {
+  return _getHtml?.() ?? ''
 }
 
 export function hasSaveFn(): boolean {

@@ -119,19 +119,28 @@ export function CommandPalette() {
                       value={result.id}
                       onSelect={() => goToPage(result.id, result.workspaceId)}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 mx-1 rounded-lg cursor-pointer',
+                        'flex items-start gap-3 px-3 py-2 mx-1 rounded-lg cursor-pointer',
                         'text-sm text-foreground transition-colors',
                         'aria-selected:bg-primary/12 aria-selected:text-foreground',
                         'hover:bg-secondary/60',
                       )}
                     >
-                      <FileText size={14} className="shrink-0 text-muted-foreground" />
-                      <span className="flex-1 truncate">{result.title || 'Sem título'}</span>
-                      {ws && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                          {ws.name}
-                        </span>
-                      )}
+                      <FileText size={14} className="shrink-0 text-muted-foreground mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-medium">{result.title || 'Sem título'}</span>
+                          {ws && (
+                            <span className="text-xs text-muted-foreground truncate max-w-[90px] shrink-0">
+                              {ws.name}
+                            </span>
+                          )}
+                        </div>
+                        {query.trim() && result.snippet && (
+                          <p className="text-xs text-muted-foreground truncate mt-0.5 leading-relaxed">
+                            {result.snippet}
+                          </p>
+                        )}
+                      </div>
                     </Command.Item>
                   )
                 })}

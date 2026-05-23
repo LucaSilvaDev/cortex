@@ -30,7 +30,9 @@ import {
 } from 'lucide-react'
 import { usePageStore } from '@/stores/pageStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { TemplateModal } from '@/components/TemplateModal'
 import { cn } from '@/lib/utils'
+import type { PageTemplate } from '@/lib/pageTemplates'
 import type { Folder as FolderType, Page } from '@/types/db'
 
 // ─── Sortable wrapper ────────────────────────────────────────────────
@@ -354,6 +356,8 @@ export function SidebarTree() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [templateOpen, setTemplateOpen] = useState(false)
+  const pendingFolderIdRef = useRef<string | null>(null)
   const pendingFocusId = useRef<string | null>(null)
 
   const rootFolders = folders.filter((f) => f.parentId === null).sort((a, b) => a.order - b.order)
@@ -410,16 +414,27 @@ export function SidebarTree() {
 
   const cancelRename = () => setEditingId(null)
 
-  const handleCreatePage = async (folderId?: string) => {
+  const handleCreatePage = (folderId?: string) => {
+    pendingFolderIdRef.current = folderId ?? null
+    setTemplateOpen(true)
+  }
+
+  const handleTemplateSelect = async (template: PageTemplate) => {
     if (!activeWorkspaceId) return
-    const page = await createPage({ workspaceId: activeWorkspaceId, folderId: folderId ?? null })
+    setTemplateOpen(false)
+    const folderId = pendingFolderIdRef.current
+    const page = await createPage({
+      workspaceId: activeWorkspaceId,
+      folderId,
+      title: template.defaultTitle,
+      content: template.id === 'blank' ? '' : JSON.stringify(template.content),
+    })
     if (folderId) setExpandedFolders((prev) => new Set([...prev, folderId]))
     navigate(`/w/${activeWorkspaceId}/p/${page.id}`)
     pendingFocusId.current = page.id
-    // Small delay so the page route renders and the tree item exists
     setTimeout(() => {
       setEditingId(page.id)
-      setEditingValue('')
+      setEditingValue(template.defaultTitle)
     }, 80)
   }
 
@@ -567,6 +582,12 @@ export function SidebarTree() {
           </SortableContext>
         </DndContext>
       )}
+
+      <TemplateModal
+        open={templateOpen}
+        onSelect={handleTemplateSelect}
+        onClose={() => setTemplateOpen(false)}
+      />
     </div>
   )
 }

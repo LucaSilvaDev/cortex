@@ -7,6 +7,7 @@ interface CreatePageInput {
   workspaceId: string
   folderId?: string | null
   title?: string
+  content?: string
 }
 
 interface CreateFolderInput {
@@ -46,7 +47,7 @@ export const usePageStore = create<PageState>()((set, get) => ({
     set({ folders, pages, workspaceId, isLoaded: true })
   },
 
-  createPage: async ({ workspaceId, folderId = null, title = '' }) => {
+  createPage: async ({ workspaceId, folderId = null, title = '', content = '' }) => {
     const now = Date.now()
     const { pages } = get()
     const siblings = pages.filter((p) => p.folderId === folderId)
@@ -55,7 +56,7 @@ export const usePageStore = create<PageState>()((set, get) => ({
       workspaceId,
       folderId,
       title,
-      content: '',
+      content,
       tags: [],
       isPublished: false,
       order: siblings.length,
