@@ -73,7 +73,8 @@ export function Topbar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [pageId, saveState])
 
-  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId)
+  const displayWorkspaceId = routeWorkspaceId ?? activeWorkspaceId
+  const activeWorkspace = workspaces.find((w) => w.id === displayWorkspaceId)
   const activePage = pages.find((p) => p.id === pageId)
   const activeFolder = activePage?.folderId
     ? folders.find((f) => f.id === activePage.folderId)
