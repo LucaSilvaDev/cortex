@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { BookOpen, FileText, Flame, LayoutGrid, Plus } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { BookOpen, ChevronLeft, ChevronRight, FileText, Flame, LayoutGrid, Plus } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useFlashcardStore } from '@/stores/flashcardStore'
 import { WorkspaceModal } from '@/features/workspaces/WorkspaceModal'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
+import { DEV_TIPS, getTipOfDay } from '@/lib/devTips'
 import type { Page, Workspace } from '@/types/db'
 import { cn } from '@/lib/utils'
 
@@ -264,6 +265,69 @@ function FlashcardPanel({
   )
 }
 
+function TipOfDay() {
+  const [index, setIndex] = useState(() => {
+    const dayIndex = Math.floor(Date.now() / 86_400_000)
+    return dayIndex % DEV_TIPS.length
+  })
+  const [dir, setDir] = useState(1)
+  const tip = DEV_TIPS[index]
+
+  function prev() { setDir(-1); setIndex((i) => (i - 1 + DEV_TIPS.length) % DEV_TIPS.length) }
+  function next() { setDir(1); setIndex((i) => (i + 1) % DEV_TIPS.length) }
+
+  return (
+    <div className="p-4 rounded-xl border border-border bg-surface overflow-hidden">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: `${tip.color}20`, color: tip.color }}
+          >
+            {tip.category}
+          </span>
+          <span className="text-[10px] text-muted-foreground/40">
+            {index + 1} / {DEV_TIPS.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={prev}
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            aria-label="Dica anterior"
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <button
+            onClick={next}
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            aria-label="Próxima dica"
+          >
+            <ChevronRight size={13} />
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: dir * 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: dir * -20 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+        >
+          <p className="text-sm text-foreground leading-relaxed mb-2">{tip.tip}</p>
+          {tip.code && (
+            <pre className="mt-2 text-xs font-mono bg-secondary/60 border border-border rounded-lg px-3 py-2 text-primary/90 overflow-x-auto whitespace-pre-wrap">
+              {tip.code}
+            </pre>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
 function WorkspaceCard({ workspace, pageCount, onClick }: { workspace: Workspace; pageCount: number; onClick: () => void }) {
   return (
     <button
@@ -303,7 +367,15 @@ export function HomePage() {
 
     const wsMap = new Map(workspaces.map((w) => [w.id, w]))
 
-    db.pages.orderBy('updatedAt').reverse().toArray().then((pages) => {
+    supabase.from('pages').select('*').order('updated_at', { ascending: false }).then(({ data }) => {
+      if (!data) return
+      const pages: Page[] = data.map((r) => ({
+        id: r.id, workspaceId: r.workspace_id, folderId: r.folder_id,
+        title: r.title, content: r.content, icon: r.icon ?? undefined,
+        coverImage: r.cover_image ?? undefined, tags: r.tags,
+        isPublished: r.is_published, isPinned: r.is_pinned ?? undefined,
+        order: r.order, createdAt: r.created_at, updatedAt: r.updated_at,
+      }))
       setAllPages(pages)
       const enriched: RecentPage[] = pages
         .filter((p) => wsMap.has(p.workspaceId))
@@ -315,13 +387,15 @@ export function HomePage() {
       setRecentPages(enriched)
     })
 
-    workspaces.forEach((ws) => {
-      db.flashcards.where('workspaceId').equals(ws.id).toArray().then((fc) => {
-        useFlashcardStore.setState((s) => ({
-          cards: [...s.cards.filter((c) => c.workspaceId !== ws.id), ...fc],
-          isLoaded: true,
-        }))
-      })
+    supabase.from('flashcards').select('*').then(({ data }) => {
+      if (!data) return
+      const cards = data.map((r) => ({
+        id: r.id, workspaceId: r.workspace_id, pageId: r.page_id ?? '',
+        front: r.front, back: r.back, interval: r.interval,
+        repetitions: r.repetitions, easeFactor: r.ease_factor,
+        dueDate: r.due_date, createdAt: r.created_at, updatedAt: r.updated_at,
+      }))
+      useFlashcardStore.setState({ cards, isLoaded: true })
     })
   }, [isLoaded, workspaces])
 
@@ -407,6 +481,14 @@ export function HomePage() {
       {/* Flashcard panel */}
       <motion.div variants={item} className="mb-8">
         <FlashcardPanel total={totalCards} novos={novos} emDia={emDia} pendentes={pendentes} />
+      </motion.div>
+
+      {/* Dica do dia */}
+      <motion.div variants={item} className="mb-8">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+          Dica do dia
+        </h2>
+        <TipOfDay />
       </motion.div>
 
       {/* Workspaces */}
