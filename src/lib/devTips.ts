@@ -350,6 +350,56 @@ export const DEV_TIPS: DevTip[] = [
   },
 ]
 
+  // ── Go ────────────────────────────────────────────────────────────────
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: 'Em Go, erros são valores retornados explicitamente — sempre verifique o erro retornado por uma função.',
+    code: 'f, err := os.Open("arquivo.txt")\nif err != nil {\n    log.Fatal(err)\n}',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: '`defer` executa uma função ao final do escopo atual — ideal para fechar arquivos, conexões e locks.',
+    code: 'f, _ := os.Open("arquivo.txt")\ndefer f.Close()\n// f é fechado automaticamente ao fim da função',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: 'Goroutines são leves e baratas — você pode criar milhares delas. Use `go func()` para concorrência simples.',
+    code: 'go func() {\n    fmt.Println("rodando em paralelo")\n}()',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: 'Channels são a forma idiomática de comunicar goroutines. "Don\'t communicate by sharing memory; share memory by communicating."',
+    code: 'ch := make(chan int)\ngo func() { ch <- 42 }()\nresult := <-ch',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: '`go test ./...` roda todos os testes do projeto. Adicione `-race` para detectar race conditions.',
+    code: 'go test ./... -race -cover',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: 'Interfaces em Go são implementadas implicitamente — basta ter os métodos, sem declarar `implements`.',
+    code: 'type Animal interface {\n    Falar() string\n}\n// Cachorro implementa Animal automaticamente\nfunc (c Cachorro) Falar() string { return "Au" }',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: '`gofmt` formata seu código automaticamente seguindo o padrão oficial. Configure o editor para rodar ao salvar.',
+    code: 'gofmt -w .',
+  },
+  {
+    category: 'Go',
+    color: '#00add8',
+    tip: 'Use `context.Context` para propagar cancelamento e timeout entre goroutines e chamadas de API.',
+    code: 'ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\ndefer cancel()\nreq, _ := http.NewRequestWithContext(ctx, "GET", url, nil)',
+  },
+
 export function getTipOfDay(): DevTip {
   const dayIndex = Math.floor(Date.now() / 86_400_000)
   return DEV_TIPS[dayIndex % DEV_TIPS.length]
