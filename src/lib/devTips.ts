@@ -348,8 +348,6 @@ export const DEV_TIPS: DevTip[] = [
     color: '#64748b',
     tip: 'DRY (Don\'t Repeat Yourself) mas sem exagerar — duplicação é melhor que abstração errada.',
   },
-]
-
   // ── Go ────────────────────────────────────────────────────────────────
   {
     category: 'Go',
@@ -399,6 +397,7 @@ export const DEV_TIPS: DevTip[] = [
     tip: 'Use `context.Context` para propagar cancelamento e timeout entre goroutines e chamadas de API.',
     code: 'ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\ndefer cancel()\nreq, _ := http.NewRequestWithContext(ctx, "GET", url, nil)',
   },
+]
 
 export function getTipOfDay(): DevTip {
   const dayIndex = Math.floor(Date.now() / 86_400_000)
